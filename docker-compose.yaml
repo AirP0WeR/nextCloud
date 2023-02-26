@@ -6,18 +6,21 @@ services:
     restart: always
     volumes:
       - db:/var/lib/postgresql/data
+    container_name: nextcloud-database
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
   app:
     image: nextcloud
+    hostname: next.ypstudio.ru
     restart: always
     ports:
       - 8088:80
     volumes:
       - nextcloud:/var/www/html
       - /mnt/Media:/data
+    container_name: nextcloud-server
     environment:
       - POSTGRES_HOST=db
       - POSTGRES_DB=${POSTGRES_DB}
