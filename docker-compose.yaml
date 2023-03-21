@@ -11,12 +11,17 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-  app:
+    networks:
+      - traefik
+    labels:
+      - "docker-volume-backup.stop-during-backup=stopservice"   
+  next:
     image: nextcloud
     hostname: next.ypstudio.ru
     restart: always
     ports:
-      - 8088:80
+      # - 8088:80
+      - 80
     volumes:
       - nextcloud:/var/www/html
       - /mnt/Media:/data
@@ -30,7 +35,18 @@ services:
       - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
     depends_on:
       - db
-
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.next.rule=Host(`next.ypstudio.ru`)"
+      - "traefik.http.routers.next.entrypoints=websecure"
+      - "traefik.http.services.next.loadbalancer.server.port=80"
+      - "traefik.http.routers.next.tls.certresolver=myresolver"
+      - "docker-volume-backup.stop-during-backup=stopservice"
+    networks:
+      - traefik
 volumes:
   db:
   nextcloud:
+networks:
+  traefik:
+    name: traefik
