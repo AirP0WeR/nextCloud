@@ -43,6 +43,15 @@ services:
       - "traefik.http.routers.next.entrypoints=websecure"
       - "traefik.http.services.next.loadbalancer.server.port=80"
       - "traefik.http.routers.next.tls.certresolver=myresolver"
+
+      - "traefik.http.middlewares.next.headers.stsSeconds=15552000"
+      - "traefik.http.middlewares.next.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.next.headers.stsPreload=true"
+      - "traefik.http.middlewares.next.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.nextcloud-dav.replacepathregex.regex=^/.well-known/ca(l|rd)dav"
+      - "traefik.http.middlewares.nextcloud-dav.replacepathregex.replacement=/remote.php/dav/"
+      - "traefik.http.routers.next.middlewares=nextcloud-dav,next"
+      
       - "docker-volume-backup.stop-during-backup=stopservice"
     networks:
       - traefik
