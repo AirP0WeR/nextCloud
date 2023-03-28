@@ -15,7 +15,7 @@ services:
     networks:
       - traefik
     labels:
-      - "docker-volume-backup.archive-pre=/bin/sh -c 'pg_dumpall -U airp0wer > /backups/nextcloud_postgress.out'"
+      - "docker-volume-backup.archive-pre=/bin/sh -c 'pg_dumpall -U ${POSTGRES_USER} > /backups/nextcloud_postgress.out'"
       - "docker-volume-backup.stop-during-backup=stopservice"   
   next:
     image: nextcloud
