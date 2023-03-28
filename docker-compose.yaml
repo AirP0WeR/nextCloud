@@ -6,6 +6,7 @@ services:
     restart: always
     volumes:
       - db:/var/lib/postgresql/data
+      - backup:/tmp/
     container_name: nextcloud-database
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
@@ -14,6 +15,7 @@ services:
     networks:
       - traefik
     labels:
+      - "docker-volume-backup.archive-pre=/bin/sh -c 'pg_dumpall -U airp0wer > /tmp/next_cloud_db/nextcloud_postgress.out'"
       - "docker-volume-backup.stop-during-backup=stopservice"   
   next:
     image: nextcloud
@@ -47,6 +49,9 @@ services:
 volumes:
   db:
   nextcloud:
+  backup:
+    name: backup
+    external: true
 networks:
   traefik:
     name: traefik
