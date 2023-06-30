@@ -1,13 +1,15 @@
 version: '3.2'
 
 services:
-  db:
+  nextcloud-db:
     image: postgres
-    restart: always
+    restart: unless-stopped
     volumes:
       - db:/var/lib/postgresql/data
       - backup:/backups/
     container_name: nextcloud-database
+    ports:
+      - 5432:5432
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -16,30 +18,32 @@ services:
       - traefik
     labels:
       - "docker-volume-backup.archive-pre=/bin/sh -c 'pg_dumpall -U ${POSTGRES_USER} > /backups/nextcloud_postgress.out'"
-      - "docker-volume-backup.stop-during-backup=stopservice"   
+      - "docker-volume-backup.stop-during-backup=stopservice"
+      - "traefik.enable=false"
   next:
     image: nextcloud
-    hostname: next.ypstudio.ru
-    restart: always
-    ports:
-      # - 8088:80
-      - 80
+    # hostname: next.ypstudio.ru
+    restart: unless-stopped
+    # ports:
+    #   # - 8088:80
+    #   - 80
     volumes:
       - nextcloud:/var/www/html
+      # - ./config:/var/www/html/config
       - /mnt/Media:/data
     container_name: nextcloud-server
     environment:
-      - POSTGRES_HOST=db
+      - POSTGRES_HOST=nextcloud-db
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
       - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
     depends_on:
-      - db
+      - nextcloud-db
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.next.rule=Host(`next.ypstudio.ru`)"
+      - "traefik.http.routers.next.rule=Host(`next.hogin.pro`)"
       - "traefik.http.routers.next.entrypoints=websecure"
       - "traefik.http.services.next.loadbalancer.server.port=80"
       - "traefik.http.routers.next.tls.certresolver=myresolver"
@@ -48,13 +52,30 @@ services:
       - "traefik.http.middlewares.next.headers.stsIncludeSubdomains=true"
       - "traefik.http.middlewares.next.headers.stsPreload=true"
       - "traefik.http.middlewares.next.headers.forceSTSHeader=true"
-      - "traefik.http.middlewares.nextcloud-dav.replacepathregex.regex=^/.well-known/ca(l|rd)dav"
-      - "traefik.http.middlewares.nextcloud-dav.replacepathregex.replacement=/remote.php/dav/"
-      - "traefik.http.routers.next.middlewares=nextcloud-dav,next"
-      
+
+      - "traefik.http.routers.nextcloud.middlewares=nextcloud_redirectregex"
+      - "traefik.http.routers.nextcloud.entrypoints=websecure"
+      - "traefik.http.middlewares.nextcloud_redirectregex.redirectregex.permanent=true"
+      - "traefik.http.middlewares.nextcloud_redirectregex.redirectregex.regex=https://(.*)/.well-known/(?:card|cal)dav"
+      - "traefik.http.middlewares.nextcloud_redirectregex.redirectregex.replacement=https://$${1}/remote.php/dav"
+
+      - "traefik.http.routers.next.middlewares=next,nextcloud_redirectregex"
       - "docker-volume-backup.stop-during-backup=stopservice"
     networks:
       - traefik
+  cron:
+      image: rcdailey/nextcloud-cronjob
+      container_name: nextcloud-cron
+      restart: unless-stopped
+      network_mode: none
+      depends_on:
+      - next
+      volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+      environment:
+      - NEXTCLOUD_CONTAINER_NAME=nextcloud-server
+      # - NEXTCLOUD_PROJECT_NAME=nextcloud
 volumes:
   db:
   nextcloud:
