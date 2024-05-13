@@ -1,6 +1,7 @@
 sudo adduser next
 sudo usermod -aG sudo next
 cp -r /root/.ssh/ /home/next/.ssh/
+chown -R next:next /home/next/.ssh/
 
 ## Intall Docker
 ### Add Docker's official GPG key:
